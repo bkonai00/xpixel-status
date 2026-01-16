@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>xdtip Overlay</title>
+
+  <style>
+    body {
+      background: transparent;
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #popup {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 15, 15, 0.9);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 14px;
+      font-size: 22px;
+      display: none;
+      max-width: 80%;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0,255,255,0.5);
+    }
+
+    .username {
+      font-weight: bold;
+      color: #00ffff;
+    }
+
+    .amount {
+      color: #00ff99;
+      font-weight: bold;
+    }
+
+    .message {
+      margin-top: 8px;
+      font-size: 20px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="popup">
+  <div class="username" id="user"></div>
+  <div class="amount" id="amount"></div>
+  <div class="message" id="message"></div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const creator = params.get("creator");
+
+  if (!creator) {
+    document.body.innerHTML = "Creator not specified";
+    throw new Error("Creator missing");
+  }
+
+  const socket = io("https://xdtip-backend.onrender.com");
+
+  socket.emit("join_creator", creator);
+
+  const popup = document.getElementById("popup");
+  const userEl = document.getElementById("user");
+  const amountEl = document.getElementById("amount");
+  const messageEl = document.getElementById("message");
+
+  socket.on("new_tip", (data) => {
+    userEl.innerText = data.username;
+    amountEl.innerText = `tipped ${data.amount} tokens`;
+    messageEl.innerText = data.message || "";
+
+    popup.style.display = "block";
+
+    const text = `${data.username} tipped ${data.amount} tokens. ${data.message || ""}`;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Auto language handling (English / Hindi / Hinglish)
+    utterance.lang = /[\u0900-\u097F]/.test(text) ? "hi-IN" : "en-IN";
+
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+
+    utterance.onend = () => {
+      popup.style.display = "none";
+    };
+  });
+</script>
+
+</body>
+</html>
